@@ -1,5 +1,5 @@
 #!/bin/sh
-'''exec' "/Users/wayneyong/Documents/Learning Courses/fastapi-the-complete-course-2026/Python-Project/fastapi/fastapienv/bin/python" "$0" "$@"
+'''exec' "/Users/wayneyong/Documents/Learning Courses/fastapi-the-complete-course-2026/Python-FastAPI-Project/fastapi/fastapienv/bin/python3" "$0" "$@"
 ' '''
 import sys
 from uvicorn.main import main
