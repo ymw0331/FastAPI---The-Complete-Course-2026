@@ -21,11 +21,25 @@ class Book:
 
 
 class BookRequest(BaseModel):
-    id: Optional[int] = None # user does not provide id (can be integer or None)
+    id: Optional[int] = Field(
+        description="ID is not needed on create", default=None
+    )  # user does not provide id (can be integer or None)
     title: str = Field(min_length=3)
     author: str = Field(min_length=1)
     description: str = Field(min_length=1, max_length=100)
     rating: int = Field(gt=0, lt=6)  # 0 - 5
+
+    # example for documentation in swagger UI
+    model_config = {
+        "json_schema_extra": {
+            "example": {
+                "title": "Computer Science Pro",
+                "author": "Wayney Yong",
+                "description": "A comprehensive guide to computer science.",
+                "rating": 5,
+            }
+        }
+    }
 
 
 BOOKS = [
