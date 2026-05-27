@@ -7,15 +7,17 @@ from starlette import status
 from models import Users
 from passlib.context import CryptContext
 from database import SessionLocal
-from fastapi.security import OAuth2PasswordRequestForm
-from jose import jwt
+from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
+from jose import JWTError, jwt
 
 router = APIRouter()
 
-SECRET_KEY = "fdc879ec395cec6ca4b0c7fa9f37694fb3fef3eb1b271b9edcdf28a988dc5511" #openssl rand -hex 32
+SECRET_KEY = "fdc879ec395cec6ca4b0c7fa9f37694fb3fef3eb1b271b9edcdf28a988dc5511"  # openssl rand -hex 32
 ALGORITHM = "HS256"
 
+# Dependencies
 bcrypt_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+oauth2_bearer = OAuth2PasswordBearer(tokenUrl="token")
 
 
 # pydantic class for field validation
@@ -65,6 +67,24 @@ def create_access_token(username: str, user_id: int, expires_delta: timedelta):
     expires = datetime.now(timezone.utc) + expires_delta
     encode.update({"exp": expires})
     return jwt.encode(encode, SECRET_KEY, algorithm=ALGORITHM)
+
+
+async def get_current_user(token: Annotated[str, Depends(oauth2_bearer)]):
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        username: str = payload.get("sub")  # sub is username
+        user_id: int = payload.get("id")
+        if username is None or user_id is None:
+            raise HTTPException(
+                status_code=status.HTTP_401_UNAUTHORIZED,
+                detail="Could not validate credentials",
+            )
+        return {"username": username, "id": user_id}
+    except JWTError:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+        )
 
 
 @router.post("/auth", status_code=status.HTTP_201_CREATED)
