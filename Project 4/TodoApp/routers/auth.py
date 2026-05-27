@@ -6,6 +6,7 @@ from starlette import status
 from models import Users
 from passlib.context import CryptContext
 from database import SessionLocal
+from fastapi.security import OAuth2PasswordRequestForm
 
 router = APIRouter()
 
@@ -23,6 +24,18 @@ def get_db():
 
 # Depends: injects get_db() into each route so we don't manually manage the session
 db_dependency = Annotated[Session, Depends(get_db)]
+
+
+def authenticate_user(username: str, password: str, db):
+
+    user = db.query(Users).filter(Users.username == username).first()
+    if not user:
+        return False
+    if not bcrypt_context.verify(
+        password, user.hashed_password
+    ):  # verify the password against the hashed password in the database
+        return False
+    return True
 
 
 # pydantic class for field validation
@@ -51,3 +64,15 @@ async def create_user(db: db_dependency, create_user_request: CreateUserRequest)
 
     db.add(create_user_model)
     db.commit()
+
+
+# return back to user a JWT token that they can use to authenticate themselves
+@router.post("/token")
+async def login_for_access_token(
+    form_data: Annotated[OAuth2PasswordRequestForm, Depends()], db: db_dependency
+):
+    user = authenticate_user(form_data.username, form_data.password, db)
+
+    if not user:
+        return "Failed to authenticate"
+    return "User authenticated"
