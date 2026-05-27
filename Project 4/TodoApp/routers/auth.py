@@ -10,14 +10,17 @@ from database import SessionLocal
 from fastapi.security import OAuth2PasswordRequestForm, OAuth2PasswordBearer
 from jose import JWTError, jwt
 
-router = APIRouter()
+router = APIRouter(
+    prefix="/auth",
+    tags=["auth"],
+)
 
 SECRET_KEY = "fdc879ec395cec6ca4b0c7fa9f37694fb3fef3eb1b271b9edcdf28a988dc5511"  # openssl rand -hex 32
 ALGORITHM = "HS256"
 
 # Dependencies
 bcrypt_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
-oauth2_bearer = OAuth2PasswordBearer(tokenUrl="token")
+oauth2_bearer = OAuth2PasswordBearer(tokenUrl="auth/token")
 
 
 # pydantic class for field validation
@@ -87,7 +90,7 @@ async def get_current_user(token: Annotated[str, Depends(oauth2_bearer)]):
         )
 
 
-@router.post("/auth", status_code=status.HTTP_201_CREATED)
+@router.post("/", status_code=status.HTTP_201_CREATED)
 async def create_user(db: db_dependency, create_user_request: CreateUserRequest):
 
     create_user_model = Users(
@@ -112,7 +115,10 @@ async def login_for_access_token(
     user = authenticate_user(form_data.username, form_data.password, db)
 
     if not user:
-        return "Failed to authenticate"
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Could not validate credentials",
+        )
     token = create_access_token(user.username, user.id, timedelta(minutes=20))
 
     return {
