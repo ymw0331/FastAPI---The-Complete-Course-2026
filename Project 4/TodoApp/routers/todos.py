@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 from fastapi import APIRouter, Depends, HTTPException, Path, status
 from models import Todos
 from database import SessionLocal
+from .auth import get_current_user
 
 router = APIRouter()
 
@@ -19,6 +20,7 @@ def get_db():
 
 # Depends: injects get_db() into each route so we don't manually manage the session
 db_dependency = Annotated[Session, Depends(get_db)]
+user_dependency = Annotated[dict, Depends(get_current_user)]
 
 
 # Pydantic model: validates and parses the request body for create/update endpoints
@@ -48,8 +50,13 @@ async def read_todo(db: db_dependency, todo_id: int = Path(gt=0)):
 # POST /todo — create a new todo from the request body, returns 201 on success
 # **todo_request.dict() unpacks the Pydantic model into keyword args (like JS spread: { ...obj })
 @router.post("/todo", status_code=status.HTTP_201_CREATED)
-async def create_todo(db: db_dependency, todo_request: TodoRequest):
-    todo_model = Todos(**todo_request.dict())
+async def create_todo(
+    user: user_dependency, db: db_dependency, todo_request: TodoRequest
+):
+    if user is None:
+        raise HTTPException(status_code=401, detail="Authentication required")
+    todo_model = Todos(**todo_request.dict(), owner_id=user.get("id"))
+
     db.add(todo_model)
     db.commit()
 
